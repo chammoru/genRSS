@@ -103,6 +103,9 @@ def get_description(file_path):
             return f.read().strip()
     return "No description available."
 
+def get_srt_file(file_path):
+    srt_file = f"{os.path.splitext(file_path)[0]}.srt"
+    return srt_file if os.path.exists(srt_file) else ""
 
 def file_to_item(host, fname, pub_date, use_metadata=False):
     """
@@ -149,6 +152,10 @@ def file_to_item(host, fname, pub_date, use_metadata=False):
     # Fetch description from a corresponding .txt file
     description = get_description(fname)
     title = get_title(fname, use_metadata)
+    srt_URL = ""
+    srt_file = get_srt_file(fname)
+    if srt_file:
+        srt_URL = urllib.parse.quote(host + srt_file.replace("\\", "/"), ":/")
 
     tags = [enclosure]
     duration = get_duration(fname)
@@ -157,6 +164,7 @@ def file_to_item(host, fname, pub_date, use_metadata=False):
 
     return build_item(
         link=file_URL,
+        srt=srt_URL,
         title=title,
         guid=file_URL,
         description=description,
@@ -256,6 +264,7 @@ def get_duration(filename):
 
 def build_item(
     link,
+    srt,
     title,
     guid=None,
     description="",
@@ -333,6 +342,8 @@ def build_item(
 
     guid = "{0}<guid>{1}</guid>\n".format(indent * 3, guid)
     link = "{0}<link>{1}</link>\n".format(indent * 3, link)
+    if srt:
+        srt = "{0}<podcast:transcript url='{1}' type='text/srt' />\n".format(indent * 3, srt)
     title = "{0}<title>{1}</title>\n".format(indent * 3, saxutils.escape(title))
     descrption = "{0}<description>{1}</description>\n".format(
         indent * 3, saxutils.escape(description)
@@ -367,8 +378,8 @@ def build_item(
                 "/>" if value is None else ">{0}</{1}>".format(value, name)
             )
 
-    return "{0}<item>\n{1}{2}{3}{4}{5}{6}{7}{0}</item>".format(
-        indent * 2, guid, link, title, descrption, itunes_summary, pub_date, extra
+    return "{0}<item>\n{1}{2}{3}{4}{5}{6}{7}{8}{0}</item>".format(
+        indent * 2, guid, link, srt, title, descrption, itunes_summary, pub_date, extra
     )
 
 
